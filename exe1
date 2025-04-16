@@ -1,14 +1,14 @@
-import yfinance as yf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import yfinance as yf  # Added missing import
 from datetime import datetime, timedelta
 import logging
 
 # Set up logging for error handling and debugging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Define stock tickers
+# Define stock tickers (DXTR has been removed)
 tickers = [
     'AAPL',  # Apple
     'GOOGL', # Alphabet (Google)
@@ -23,7 +23,6 @@ tickers = [
     'ACN',   # Accenture
     'SSNLF', # Samsung (OTC ticker, may have limited data)
     'VZ',    # Verizon
-    'DXTR',  # Dexter (assuming OTC or placeholder; verify ticker)
     'T'      # AT&T
 ]
 
@@ -48,6 +47,10 @@ def fetch_stock_data(ticker, start_date, end_date):
 def calculate_parameters(prices):
     """Calculate historical returns, volatility, and last price."""
     if prices is None or len(prices) < 2:
+        return None, None, None
+    # Filter out non-positive prices to avoid invalid log values
+    prices = prices[prices > 0]
+    if len(prices) < 2:
         return None, None, None
     returns = np.log(prices / prices.shift(1)).dropna()
     mu = returns.mean() * 252  # Annualized mean return
@@ -112,14 +115,8 @@ def main():
         final_prices = simulation[-1]
         mean_final_price = np.mean(final_prices)
         
-        # Store results
-        summary = pd.concat([summary, pd.DataFrame({
-            'Ticker': [ticker],
-            'Last_Price': [last_price],
-            'Mean_Return': [mu],
-            'Volatility': [sigma],
-            'Final_Mean_Price': [mean_final_price]
-        })], ignore_index=True)
+        # Store results using loc instead of pd.concat to avoid FutureWarning
+        summary.loc[len(summary)] = [ticker, last_price, mu, sigma, mean_final_price]
 
         # Plot results
         plot_simulations(ticker, simulation)
